@@ -12,7 +12,7 @@ class MAML:
                  model_generator: Callable,
                  tasks: List[Task],
                  alpha: float = 0.01,
-                 beta: float = 0.01,
+                 beta: float = 0.001,
                  K: int = 5,
                  task_batch_size: int = 10,
                  gradient_steps: int = 10):
