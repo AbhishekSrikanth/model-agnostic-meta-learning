@@ -7,5 +7,5 @@ def pretrain_model(model_generator, tasks):
     for i, task in enumerate(tasks):
         print("task: ", i, " of ", len(tasks))
         x_train, y_train = task.get_train_data()
-        model.fit(x_train, y_train, epochs=1, verbose=0)
+        model.fit(x_train, y_train, epochs=1000, verbose=0)
     return model
