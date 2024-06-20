@@ -15,7 +15,7 @@ class MAML:
                  beta: float = 0.001,
                  K: int = 5,
                  task_batch_size: int = 10,
-                 gradient_steps: int = 10):
+                 gradient_steps: int = 1000):
 
         self.model_generator = model_generator
         self.alpha = alpha
@@ -26,8 +26,8 @@ class MAML:
         self.tasks = tasks
 
         self._train_tasks, self._test_tasks = self._split_tasks()
-
-        self._meta_model = None
+        self._meta_model = self.model_generator()
+        self.meta_optimizer = tf.keras.optimizers.Adam(learning_rate=self.beta)
 
     def _split_tasks(self, test_ratio=0.2):
 
@@ -35,26 +35,22 @@ class MAML:
         num_test_tasks = int(len(self.tasks) * test_ratio)
         test_tasks = self.tasks[:num_test_tasks]
         train_tasks = self.tasks[num_test_tasks:]
-
         return train_tasks, test_tasks
 
     def train(self, verbose=True):
-
-        self._meta_model = self.model_generator()
-
         for step in range(self.gradient_steps):
-
-            # Sample a batch of tasks
-            task_batch = np.random.choice(
-                self._train_tasks, self.task_batch_size)
-
+            task_batch = np.random.choice(self._train_tasks, self.task_batch_size, replace=False)
             task_losses = []
+
+            # Initialize the meta gradients with zero
+            meta_gradients = [tf.zeros_like(weight) for weight in self._meta_model.trainable_variables]
 
             for task in task_batch:
 
                 # Clone the model
                 base_model = self.model_generator()
                 base_model.set_weights(self._meta_model.get_weights())
+                task_optimizer = tf.keras.optimizers.Adam(learning_rate=self.alpha)
 
                 # Sample K data points from the task
                 x_train_k, y_train_k = task.get_train_data(self.K)
@@ -65,29 +61,27 @@ class MAML:
                     loss = tf.reduce_mean(tf.square(y_pred - y_train_k))
 
                 gradients = tape.gradient(loss, base_model.trainable_variables)
-
-                # Update the base_model
-                base_model.optimizer.apply_gradients(
-                    zip(gradients, base_model.trainable_variables))
+                task_optimizer.apply_gradients(zip(gradients, base_model.trainable_variables))
 
                 # Sample K data points from the task for validation
                 x_val_k, y_val_k = task.get_test_data(self.K)
-
-                # Compute the validation loss
-                y_pred = base_model(x_val_k)
-                task_loss = tf.reduce_mean(tf.square(y_pred - y_val_k))
+                y_pred_val = base_model(x_val_k)
+                task_loss = tf.reduce_mean(tf.square(y_pred_val - y_val_k))
                 task_losses.append(task_loss)
 
-            # Compute the meta gradient using the task losses
-            meta_gradients = []
-            for meta_weight, task_loss in zip(self._meta_model.get_weights(), task_losses):
-                meta_gradients.append(task_loss * meta_weight)
+                with tf.GradientTape() as tape:
+                    y_pred_val = base_model(x_val_k)
+                    loss = tf.reduce_mean(tf.square(y_pred_val - y_val_k))
 
-            # Update the meta model
-            self._meta_model.optimizer.apply_gradients(
-                zip(meta_gradients, self._meta_model.trainable_variables))
+                gradients = tape.gradient(loss, base_model.trainable_variables)
+                for i, grad in enumerate(gradients):
+                    meta_gradients[i] += grad / self.task_batch_size
 
-            print(f'Step: {step}, Meta Loss: {np.mean(task_losses)}')
+            # Meta update
+            self.meta_optimizer.apply_gradients(zip(meta_gradients, self._meta_model.trainable_variables))
+
+            if verbose and step % 10 == 0:
+                print(f'Step: {step}, Meta Loss: {np.mean(task_losses)}')
 
         # Evaluate the model on the test tasks
         test_losses = []
