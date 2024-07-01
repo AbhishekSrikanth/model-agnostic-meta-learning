@@ -1,0 +1,30 @@
+{
+    "task_config":{
+        "train_tasks": 50,
+        "train_tasks_samples": 100,
+        "few_shot_task_samples": 1000,
+        "test_split": 0.2
+    },
+    "sinusoid_config":{
+        "amplitude_range": {
+            "min": 0.1,
+            "max": 5.0
+        },
+        "phase_range": {
+            "min": 0.0,
+            "max": 3.14
+        },
+        "x_range": {
+            "min": -5.0,
+            "max": 5.0
+        }
+    },
+    "maml_config":{
+        "alpha": 0.01,
+        "beta": 0.001,
+        "K": 5,
+        "task_batch_size": 10,
+        "gradient_steps": 10,
+        "test_split": 0.2
+    }
+}
