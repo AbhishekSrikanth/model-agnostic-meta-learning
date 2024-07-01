@@ -10,42 +10,36 @@ class Task:
         self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(
             x, y, test_size=self.test_split)
 
-    def get_train_data(self, K: int | None = None):
-
+    def _get_data(self, x: list, y: list, K: int | None = None):
         if K is None:
-            return self.x_train, self.y_train
+            return x, y
 
-        indices = np.random.choice(len(self.x_train), K, replace=False)
-        x_train_k = self.x_train[indices]
-        y_train_k = self.y_train[indices]
-        return x_train_k, y_train_k
+        indices = np.random.choice(len(x), K, replace=False)
+        x_k = x[indices]
+        y_k = y[indices]
+        return x_k, y_k
+
+    def _plot_data(self, x, y, label):
+        plt.scatter(x, y, label=label)
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.legend()
+        plt.show()
+
+    def get_train_data(self, K: int | None = None):
+        return self._get_data(self.x_train, self.y_train, K)
 
     def get_test_data(self, K: int | None = None):
+        return self._get_data(self.x_test, self.y_test, K)
 
-        if K is None:
-            return self.x_test, self.y_test
+    def plot_train_data(self):
+        self._plot_data(self.x_train, self.y_train, 'Train Data')
 
-        indices = np.random.choice(len(self.x_test), K, replace=False)
-        x_test_k = self.x_test[indices]
-        y_test_k = self.y_test[indices]
-        return x_test_k, y_test_k
+    def plot_test_data(self):
+        self._plot_data(self.x_test, self.y_test, 'Test Data')
 
     def __repr__(self) -> str:
         return '<BaseTask>'
-
-    def plot_train_data(self):
-        plt.scatter(self.x_train, self.y_train, label='Train Data')
-        plt.xlabel('x')
-        plt.ylabel('y')
-        plt.legend()
-        plt.show()
-
-    def plot_test_data(self):
-        plt.scatter(self.x_test, self.y_test, label='Test Data')
-        plt.xlabel('x')
-        plt.ylabel('y')
-        plt.legend()
-        plt.show()
 
 
 class SinusoidTask(Task):
@@ -59,19 +53,3 @@ class SinusoidTask(Task):
 
     def __repr__(self) -> str:
         return f'<SinusoidTask(amplitude={self.amplitude}, phase={self.phase})>'
-
-    def plot_train_data(self):
-        plt.scatter(self.x_train, self.y_train, label='Train Data')
-        plt.xlabel('x')
-        plt.ylabel('y')
-        plt.legend()
-        plt.title(self.plot_title)
-        plt.show()
-
-    def plot_test_data(self):
-        plt.scatter(self.x_test, self.y_test, label='Test Data')
-        plt.xlabel('x')
-        plt.ylabel('y')
-        plt.legend()
-        plt.title(self.plot_title)
-        plt.show()
